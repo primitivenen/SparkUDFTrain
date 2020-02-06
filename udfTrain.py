@@ -3,7 +3,7 @@ dbutils.fs.mkdirs("dbfs:/FileStore/temporary")
 
 # COMMAND ----------
 
-import joblib # To Pickel Trained model file 
+import joblib # To Pickel Trained model file
 import numpy as np # To create random data
 import pandas as pd # To operate on data in Python Process
 from sklearn.linear_model import LinearRegression # To train Linear Regression models
@@ -52,7 +52,7 @@ dbutils.fs.mv("file:/databricks/driver/df2.csv.gz", "dbfs:/FileStore/temporary/d
 sparkDF = (spark.read
             .option("header", "true")
             .option("delimiter", ",")
-            .option("inferSchema", "true") 
+            .option("inferSchema", "true")
             .csv('dbfs:/FileStore/temporary/df*.csv.gz'))
 
 sparkDF.rdd.getNumPartitions()
@@ -63,7 +63,7 @@ sparkDF.rdd.getNumPartitions()
 def train_lm_pandas_udf(*cols):
     df = pd.concat(cols, axis=1) # Create pandas dataframe using input Spark DataFrame columns
     df.columns = ['x', 'y', 'name']
-    modelUDF = LinearRegression() # Scikit-Learn Linear Regression 
+    modelUDF = LinearRegression() # Scikit-Learn Linear Regression
     modelUDF.fit(pd.DataFrame(df['x']),df['y']) # Fit Scikit-Learn Linear Regression Model
     sig = df.loc[0,'name'] # Unique Identiter for model files, obtained from one of the columns in dataset
     joblib.dump(modelUDF, 'modelUDF{signature}.joblib'.format(signature=sig)) # Pickel Thetrained model file
@@ -80,7 +80,7 @@ sparkDF2 = sparkDF.select(train_lm_pandas_udf(*column_names).alias("TrainPredict
 
 # COMMAND ----------
 
-sparkDF2.collect()
+sparkDF2.rdd.count()
 
 # COMMAND ----------
 
@@ -100,5 +100,3 @@ modeldf1.coef_
 modeldf2.coef_
 
 # COMMAND ----------
-
-
