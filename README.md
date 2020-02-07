@@ -6,11 +6,11 @@ Spark’s native ML library though powerful generally lack in features. Python�
 ## Pandas — UDF (Get best of both worlds)
 Pyspark performs computation through following data-flow:
 
-<Image 1>
+![](images/YlI8AqEl.jpg)
 
 We trigger our spark-context program on Master(“Local” in image here) node. The Spark program is executed on JVMs. Whenever during execution of code Spark encounters Python functions JVMs starts Python processes on working clusters and Python takes on the assigned task. Necessary data required for computation is pickled to Python and results are pickled back to JVM. Below is schematic data-flow for Pandas UDFs.
 
-<Image 2>
+![](images/pandasUDFdataflow.JPG)
 
 Pandas-UDF have similar data-flow. Additionally, to make the process more performance efficient “Arrow” (Apache Arrow is a cross-language development platform for in-memory data.) is used. Arrow allows data transfer from JVMs to Python processes in vectorized form, resulting in better performance in Python processes.
 There is ample of reference material available for data munging, data manipulation, grouped data aggregation and model prediction/execution using Pandas UDFs. This tutorial serves the purpose of providing a guide to perform “Embarrassingly Parallel Model Training” using Pandas UDF.
@@ -66,8 +66,7 @@ gzip -f "df2.csv"
 
 dbutils.fs.mv("file:/databricks/driver/df2.csv.gz", "dbfs:/FileStore/temporary/df2.csv.gz")
 ```
-
-<image 3>
+![](images/files.JPG)
 
 ### 4. Read files as Spark DataFrame
 
@@ -80,8 +79,7 @@ sparkDF = (spark.read
 
 sparkDF.rdd.getNumPartitions()
 ```
-
-<image 4>
+![](images/readDF.JPG)
 
 As files are in zipped format we get one partition for each file. Resulting in total two partitions of SparkDF, instead of default 8. This facilitates in keeping all the data in one worker node and one contiguous memory. Therefore, Machine Learning model can easily be trained using Python libraries on each partition to produce individual models.
 ### 5. Pandas UDF function for Model Training
@@ -97,7 +95,6 @@ def train_lm_pandas_udf(*cols):
     return pd.Series(modelUDF.predict(pd.DataFrame(df['x']))) # Returns Predicted values on training data
 ```
 
-
 The UDF function here trains Scikit-Learn model Spark Data-frame partitions and pickle individual models to “file:/databricks/driver”. Unfortunately, we cannot pickle directly to “FileStore” in Databricks environment. But, can later move the model files to “FileStore”!
 ### 6. Train the models
 Create “sparkDF2” which call “train_lm_pandas_udf” on “sparkDF”, created in step 4.
@@ -110,22 +107,22 @@ sparkDF2.rdd.count() # Action is required to initate model training.
 
 To initiate model training we need to trigger action on sparkDF2. Make sure the action used to trigger touches all partitions otherwise training will only happen for partitions touched.
 
-<image 5>
+![](images/jobDAG.JPG)
 
 As evident form Job DAG, the columns are navigated to Python using Arrow, to complete the model training. Additionally, we can see that there is no Shuffle Write/Read due to Embarrassingly parallel nature of the job.
 
-<image 6>
+![](images/eventTimeline.JPG)
 
 Above displays event timeline for stages of execution of spark job. Parallel execution reduces the time to train by 1/2! (which can be improved by improving on size of your cluster and training more models).
 ### 7. Testing the models
 As we have trained models on dummy data, we have good idea of what model coefficients should be. So we can simply load model files and see if model coefficients make sense.
 
-<image 7>
+![](images/trainedFiles.JPG)
 ```python
 modeldf1 = joblib.load('modelUDFdf1.joblib')
 modeldf2 = joblib.load('modelUDFdf2.joblib')
 ```
-<image 8>
+![](images/modelCoef.png)
 
 Evident from results above. Model coefficient for df1 is 2.55, which is close to our equation for df1: Y = 2.5 X + random noise. And for df2 it is 2.93 consistent with df2: Y = 3.0 X + random noise.
 
